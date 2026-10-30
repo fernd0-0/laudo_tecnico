@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gerador de laudo técnico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f2;--panel:#fff;--ink:#1b2a30;--muted:#5a6b72;--line:#cfd8db;--accent:#0f6e6e;--accent-ink:#fff;--soft:#e2eeee;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12191c;--panel:#1a2428;--ink:#e6eef0;--muted:#93a5ab;--line:#2f3f45;--accent:#4fc1bd;--accent-ink:#08201f;--soft:#1f3436}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#12191c;--panel:#1a2428;--ink:#e6eef0;--muted:#93a5ab;--line:#2f3f45;--accent:#4fc1bd;--accent-ink:#08201f;--soft:#1f3436}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 4px;font-weight:600}
+.sub{color:var(--muted);margin:0 0 18px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+input[type=text],select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+textarea{resize:vertical}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cats{display:flex;flex-wrap:wrap;gap:6px}
+.cats button{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.cats button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.checks{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.checks label{display:flex;gap:8px;align-items:flex-start;margin:0;padding:5px 6px;border-radius:6px;color:var(--ink);font-size:14px;cursor:pointer}
+.checks label:hover{background:var(--soft)}
+.checks input{margin-top:4px;accent-color:var(--accent)}
+h2{font-size:14px;margin:16px 0 0;font-weight:600}
+.bar{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.bar button{font:inherit;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:8px 14px;cursor:pointer}
+.bar button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
+#out{min-height:420px;font:13.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.row{grid-template-columns:1fr}}
+@media (max-width:820px){
+ main{padding:14px 12px 24px}
+ input[type=text],select,textarea{font-size:16px}
+ .cats{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;margin:0 -4px;-webkit-overflow-scrolling:touch}
+ .cats button{flex:none;padding:9px 14px;white-space:nowrap}
+ .checks label{padding:10px 6px}
+ #out{min-height:320px}
+ .bar{position:sticky;bottom:0;background:var(--panel);padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+ .bar button{flex:1;padding:12px 14px}
+}
+</style>
+</head>
+<body>
+<main>
+<h1>Gerador de laudo técnico</h1>
+<p class="sub">Escolha o problema, marque o que foi testado, e o texto sai pronto para colar no chamado.</p>
+<div class="grid">
+<section class="panel" aria-label="Dados">
+  <h2 style="margin-top:0">Problema</h2>
+  <div class="cats" id="cats" role="group" aria-label="Categoria"></div>
+  <div class="row">
+    <div><label for="equip">Equipamento</label><input type="text" id="equip" placeholder="Dell Latitude 3420, patrimônio 0123"></div>
+    <div><label for="tec">Técnico</label><input type="text" id="tec" placeholder="Seu nome"></div>
+  </div>
+  <label for="relato">Relato do usuário</label>
+  <textarea id="relato" rows="2"></textarea>
+  <h2>Procedimentos realizados</h2>
+  <div class="checks" id="procs"></div>
+  <label for="achados">Achados (valores, saúde do disco, temperaturas…)</label>
+  <textarea id="achados" rows="3" placeholder="Ex.: CrystalDiskInfo: saúde 62%, 41 setores realocados. Temp. média 87 °C."></textarea>
+  <label for="concl">Conclusão</label>
+  <select id="concl"></select>
+</section>
+<section class="panel" aria-label="Texto gerado">
+  <h2 style="margin-top:0">Texto gerado</h2>
+  <textarea id="out" rows="22" aria-label="Laudo gerado, editável"></textarea>
+  <div class="bar">
+    <button class="pri" id="copy">Copiar texto</button>
+    <button id="reset">Limpar campos</button>
+  </div>
+  <p class="sub" id="msg" style="margin:8px 0 0" aria-live="polite">Ao mudar qualquer campo à esquerda, o texto é refeito.</p>
+</section>
+</div>
+</main>
+<script>
+const D={
+"Máquina lenta":{
+ relato:"Usuário relata lentidão geral no equipamento, com demora para iniciar o sistema e abrir programas.",
+ procs:[
+  "Verificação do uso de CPU, memória e disco no Gerenciador de Tarefas",
+  "Análise de saúde do SSD/HD com CrystalDiskInfo (status S.M.A.R.T., setores realocados, horas de uso)",
+  "Teste de leitura e escrita sequencial/aleatória com CrystalDiskMark",
+  "Varredura de superfície e latência com HD Tune",
+  "Teste de diagnóstico do fabricante do disco (Dell SupportAssist, HP PC Hardware Diagnostics, Lenovo Diagnostics, SeaTools, WD Dashboard ou Samsung Magician)",
+  "Teste de memória RAM com Diagnóstico de Memória do Windows / MemTest86",
+  "Verificação de programas na inicialização e serviços desnecessários",
+  "Execução de sfc /scannow e DISM /RestoreHealth",
+  "Execução de chkdsk para verificação do sistema de arquivos",
+  "Verificação de temperaturas e throttling de CPU com HWMonitor/HWiNFO",
+  "Análise antivírus/antimalware completa",
+  "Verificação do plano de energia e atualizações pendentes (Windows e drivers)",
+  "Limpeza de arquivos temporários e liberação de espaço em disco"],
+ conc:[
+  {l:"Disco com desgaste/falha",t:"Os testes indicaram degradação do dispositivo de armazenamento, causa provável da lentidão apresentada.",r:"Substituição do SSD/HD por unidade nova, com clonagem ou reinstalação do sistema e restauração dos dados."},
+  {l:"Memória insuficiente",t:"Constatado uso de memória RAM próximo do limite, gerando paginação excessiva em disco.",r:"Upgrade de memória RAM para, no mínimo, 16 GB."},
+  {l:"Sistema com software excessivo/corrompido",t:"Os testes de hardware não apontaram falhas. A lentidão decorre de software (inicialização carregada, arquivos de sistema ou configuração).",r:"Após ajustes realizados, recomenda-se acompanhamento. Persistindo, formatação e reinstalação do sistema."},
+  {l:"Superaquecimento",t:"Identificadas temperaturas elevadas com redução de desempenho do processador (throttling).",r:"Limpeza interna e troca da pasta térmica."},
+  {l:"Sem falhas encontradas",t:"Nenhuma falha de hardware foi identificada nos testes realizados. Equipamento operando dentro dos parâmetros.",r:"Manter acompanhamento. Reabrir o chamado caso o sintoma retorne."}]},
+"Não liga":{
+ relato:"Usuário relata que o equipamento não liga ou não completa a inicialização.",
+ procs:[
+  "Verificação da fonte/carregador com multímetro e teste com fonte compatível",
+  "Teste com bateria removida (alimentação direta pela fonte)",
+  "Descarga de energia residual (hard reset)",
+  "Verificação visual de placa-mãe, conectores e componentes (oxidação, capacitores estufados)",
+  "Teste de memória RAM com módulos individuais e em slots alternados",
+  "Teste com disco removido para checar o POST/BIOS",
+  "Verificação de códigos sonoros/LEDs de diagnóstico",
+  "Reset da BIOS/CMOS e troca da bateria CMOS",
+  "Teste com monitor externo para descartar falha de display"],
+ conc:[
+  {l:"Fonte/carregador defeituoso",t:"Constatada falha na fonte de alimentação. Com fonte de teste o equipamento operou normalmente.",r:"Substituição da fonte/carregador."},
+  {l:"Memória RAM defeituosa",t:"Equipamento não completou o POST com o módulo original. Com módulo de teste operou normalmente.",r:"Substituição do módulo de memória."},
+  {l:"Falha na placa-mãe",t:"Esgotados os testes de componentes externos sem sucesso. Indício de falha na placa-mãe.",r:"Encaminhar para laboratório/garantia para análise em nível de placa."},
+  {l:"Display com defeito",t:"O equipamento liga, porém sem imagem no display interno. Imagem normal em monitor externo.",r:"Substituição do display ou do cabo flat."}]},
+"Tela azul / travamentos":{
+ relato:"Usuário relata telas azuis e travamentos frequentes durante o uso.",
+ procs:[
+  "Análise do código de erro (BSOD) e dos arquivos de dump com BlueScreenView/WinDbg",
+  "Verificação de eventos críticos no Visualizador de Eventos",
+  "Teste de memória RAM com MemTest86 (múltiplos passes)",
+  "Análise S.M.A.R.T. do disco com CrystalDiskInfo",
+  "Teste de superfície com HD Tune / diagnóstico do fabricante",
+  "Execução de sfc /scannow e DISM /RestoreHealth",
+  "Atualização/reinstalação de drivers (chipset, vídeo, armazenamento)",
+  "Verificação de temperaturas sob carga",
+  "Teste de estresse de CPU/GPU"],
+ conc:[
+  {l:"Memória RAM com erros",t:"O teste de memória apontou erros, compatíveis com as telas azuis.",r:"Substituição do módulo de memória."},
+  {l:"Disco com falha",t:"Identificados erros no dispositivo de armazenamento, causa provável das falhas.",r:"Substituição do disco e reinstalação do sistema."},
+  {l:"Driver incompatível",t:"Os dumps apontam driver como origem do erro. Após atualização/correção, o equipamento ficou estável nos testes.",r:"Acompanhar por alguns dias."}]},
+"Superaquecimento":{
+ relato:"Usuário relata aquecimento excessivo, ventoinha em alta rotação e desligamentos inesperados.",
+ procs:[
+  "Monitoramento de temperaturas em repouso e sob carga com HWiNFO/HWMonitor",
+  "Verificação de throttling térmico",
+  "Inspeção visual das saídas de ar e do cooler",
+  "Teste de rotação da ventoinha",
+  "Verificação de processos com alto consumo de CPU",
+  "Verificação do plano de energia e atualização da BIOS"],
+ conc:[
+  {l:"Sujeira / pasta térmica ressecada",t:"Constatado acúmulo de poeira e pasta térmica ressecada, com temperatura acima do recomendado.",r:"Limpeza interna completa e troca da pasta térmica."},
+  {l:"Ventoinha com defeito",t:"A ventoinha apresentou ruído e rotação abaixo do esperado.",r:"Substituição do cooler."}]},
+"Rede / internet":{
+ relato:"Usuário relata ausência de conexão ou lentidão de rede.",
+ procs:[
+  "Verificação do cabo, porta e LEDs da placa de rede",
+  "Teste de conectividade (ping ao gateway, DNS e internet)",
+  "Execução de ipconfig /release, /renew e /flushdns",
+  "Teste de velocidade e verificação de IP/DHCP",
+  "Reinstalação do driver da placa de rede",
+  "Teste com outro cabo, porta de switch e equipamento",
+  "Verificação de proxy, firewall e antivírus"],
+ conc:[
+  {l:"Problema de configuração local",t:"Identificada configuração incorreta no equipamento. Corrigida, com conexão normalizada.",r:"Sem ações adicionais."},
+  {l:"Cabo/ponto de rede defeituoso",t:"Falha identificada no cabo ou ponto de rede. Equipamento funcionou normalmente em outro ponto.",r:"Encaminhar para infraestrutura de redes."},
+  {l:"Placa de rede com defeito",t:"A placa de rede não operou nos testes, mesmo após reinstalação de drivers.",r:"Substituição da placa ou uso de adaptador."}]}
+,
+"Windows não inicia":{
+ relato:"Usuário relata que o Windows não inicia, fica em reparo automático ou apresenta erro de boot.",
+ procs:[
+  "Verificação de reconhecimento do disco na BIOS/UEFI",
+  "Análise S.M.A.R.T. do disco com CrystalDiskInfo (por mídia externa)",
+  "Teste de superfície com HD Tune / diagnóstico do fabricante",
+  "Reparo de inicialização pelo ambiente de recuperação (WinRE)",
+  "Reconstrução do BCD (bootrec /fixmbr, /fixboot, /rebuildbcd)",
+  "Verificação do sistema de arquivos com chkdsk",
+  "Verificação de arquivos do sistema offline com sfc e DISM",
+  "Verificação do modo de boot (UEFI/Legacy), Secure Boot e ordem de boot",
+  "Backup dos dados do usuário por mídia externa antes de qualquer intervenção"],
+ conc:[
+  {l:"Disco com falha",t:"O disco apresentou erros físicos ou não foi reconhecido de forma estável, impedindo a inicialização.",r:"Substituição do disco, reinstalação do sistema e restauração do backup."},
+  {l:"Boot/sistema corrompido",t:"O disco está saudável. A falha decorre de corrupção do boot ou de arquivos do sistema.",r:"Reparo realizado. Persistindo, reinstalação do Windows preservando os dados."},
+  {l:"Configuração de BIOS",t:"A falha decorria de configuração de BIOS/UEFI (ordem de boot ou modo de disco). Ajustada, o sistema iniciou normalmente.",r:"Sem ações adicionais."}]},
+"Vírus / malware":{
+ relato:"Usuário relata comportamento anormal: anúncios, redirecionamentos, lentidão ou arquivos alterados.",
+ procs:[
+  "Isolamento do equipamento da rede",
+  "Varredura completa com antivírus corporativo atualizado",
+  "Varredura complementar com Malwarebytes e Windows Defender Offline",
+  "Análise de processos, serviços e tarefas agendadas suspeitas (Autoruns/Process Explorer)",
+  "Verificação de extensões de navegador e página inicial",
+  "Verificação de contas de usuário e programas instalados recentemente",
+  "Revisão de arquivos de hosts, proxy e DNS",
+  "Orientação de troca de senhas"],
+ conc:[
+  {l:"Malware removido",t:"Identificadas e removidas ameaças. Nas varreduras seguintes, nenhuma detecção.",r:"Manter antivírus atualizado e acompanhar. Trocar as senhas de contas usadas no equipamento."},
+  {l:"Comprometimento grave",t:"O nível de infecção compromete a confiabilidade do sistema.",r:"Backup dos dados, formatação e reinstalação do sistema. Comunicar a equipe de segurança."},
+  {l:"Nenhuma ameaça encontrada",t:"As varreduras não detectaram ameaças. O comportamento relatado tem outra origem.",r:"Prosseguir com análise de desempenho e configuração."}]},
+"Impressora":{
+ relato:"Usuário relata que a impressora não imprime, imprime com falhas ou não é encontrada.",
+ procs:[
+  "Verificação de energia, cabos, papel, toner/tinta e mensagens no painel",
+  "Verificação de conectividade (USB, rede/IP, Wi-Fi) e ping ao IP da impressora",
+  "Limpeza da fila de impressão e reinício do serviço Spooler",
+  "Remoção e reinstalação do driver na versão do fabricante",
+  "Verificação da porta (TCP/IP) e do compartilhamento",
+  "Impressão de página de teste e de configuração",
+  "Limpeza de cabeçotes/rolos e verificação de atolamentos",
+  "Teste a partir de outro computador"],
+ conc:[
+  {l:"Driver/spooler",t:"A falha era de software (driver ou fila travada). Normalizado após reinstalação.",r:"Sem ações adicionais."},
+  {l:"Rede/IP alterado",t:"A impressora trocou de IP ou perdeu conexão com a rede. Porta reconfigurada.",r:"Reservar IP fixo para a impressora."},
+  {l:"Defeito de hardware",t:"Os testes indicam defeito físico na impressora (mecanismo, cabeçote ou fusor).",r:"Encaminhar para manutenção ou assistência técnica."}]},
+"Bateria / carregamento":{
+ relato:"Usuário relata que o notebook não carrega, descarrega rápido ou desliga fora da tomada.",
+ procs:[
+  "Verificação de saúde da bateria (powercfg /batteryreport e diagnóstico do fabricante)",
+  "Teste do carregador (tensão e potência) e do conector DC",
+  "Teste com outro carregador compatível",
+  "Atualização da BIOS e dos drivers de gerenciamento de energia",
+  "Verificação do plano de energia e de processos que mais consomem",
+  "Descarga de energia residual (hard reset)"],
+ conc:[
+  {l:"Bateria degradada",t:"A capacidade atual está bem abaixo da original, justificando a baixa autonomia.",r:"Substituição da bateria."},
+  {l:"Carregador/conector com defeito",t:"Falha identificada no carregador ou no conector de energia.",r:"Substituição do carregador ou reparo do conector."}]},
+"Sem vídeo / imagem":{
+ relato:"Usuário relata que o equipamento liga, mas não exibe imagem.",
+ procs:[
+  "Teste com outro monitor, cabo e porta de vídeo",
+  "Verificação de conectores e do cabo flat do display",
+  "Verificação da fonte de entrada do monitor",
+  "Teste de memória RAM em slots alternados",
+  "Reset da BIOS/CMOS",
+  "Teste com placa de vídeo diferente ou vídeo integrado",
+  "Verificação de artefatos e temperatura da GPU"],
+ conc:[
+  {l:"Monitor/cabo defeituoso",t:"Com outro monitor/cabo, a imagem normalizou.",r:"Substituição do monitor ou cabo."},
+  {l:"Placa de vídeo com defeito",t:"Falha identificada na placa de vídeo. No vídeo integrado, o equipamento operou.",r:"Substituição da placa de vídeo."},
+  {l:"Memória RAM",t:"Falha de POST causada por módulo de memória. Normalizado com módulo de teste.",r:"Substituição do módulo."}]},
+"Periféricos / USB":{
+ relato:"Usuário relata que teclado, mouse, USB ou outro periférico não é reconhecido ou falha.",
+ procs:[
+  "Teste do periférico em outra porta e em outro computador",
+  "Verificação no Gerenciador de Dispositivos",
+  "Reinstalação de drivers e do controlador USB",
+  "Desativação da suspensão seletiva USB",
+  "Teste de energia da porta e verificação de hubs",
+  "Troca de pilhas/bateria e do receptor (periféricos sem fio)"],
+ conc:[
+  {l:"Periférico defeituoso",t:"O periférico falhou também em outro computador.",r:"Substituição do periférico."},
+  {l:"Driver/configuração",t:"A falha era de software. Normalizada após reinstalação dos drivers.",r:"Sem ações adicionais."},
+  {l:"Porta USB com defeito",t:"O periférico funciona em outro computador, mas não nas portas deste.",r:"Reparo da porta ou uso de hub."}]},
+"Backup / dados":{
+ relato:"Usuário solicita backup, recuperação de dados ou relata perda de arquivos.",
+ procs:[
+  "Verificação de saúde do disco antes da cópia (CrystalDiskInfo)",
+  "Cópia dos dados para mídia externa ou nuvem, com conferência de integridade",
+  "Verificação de lixeira, versões anteriores e histórico de arquivos",
+  "Varredura de recuperação lógica (Recuva / TestDisk)",
+  "Verificação de OneDrive/backup corporativo",
+  "Imagem do disco (clonagem) antes de tentativas de recuperação"],
+ conc:[
+  {l:"Dados recuperados",t:"Os dados foram recuperados e conferidos.",r:"Implantar rotina de backup periódico."},
+  {l:"Recuperação parcial",t:"Parte dos dados foi recuperada. O restante está comprometido.",r:"Cessar uso do disco. Avaliar laboratório especializado."},
+  {l:"Falha física no disco",t:"O disco apresenta falha física, inviabilizando a recuperação local.",r:"Encaminhar a laboratório de recuperação de dados."}]}
+};
+const $=id=>document.getElementById(id);
+let cat=Object.keys(D)[0];
+function drawCats(){$("cats").innerHTML="";Object.keys(D).forEach(k=>{const b=document.createElement("button");b.textContent=k;b.setAttribute("aria-pressed",k===cat);b.onclick=()=>{cat=k;load();};$("cats").appendChild(b);});}
+function load(){
+ const d=D[cat];drawCats();$("relato").value=d.relato;
+ $("procs").innerHTML="";d.procs.forEach((p,i)=>{const l=document.createElement("label");l.innerHTML='<input type="checkbox" checked data-i="'+i+'"><span></span>';l.querySelector("span").textContent=p;$("procs").appendChild(l);});
+ $("concl").innerHTML="";d.conc.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c.l;$("concl").appendChild(o);});
+ $("achados").value="";gen();
+}
+function gen(){
+ const d=D[cat],c=d.conc[$("concl").value||0];
+ const procs=[...document.querySelectorAll("#procs input:checked")].map(x=>"- "+d.procs[x.dataset.i]);
+ const hoje=new Date().toLocaleDateString("pt-BR");
+ let t="LAUDO TÉCNICO - "+cat.toUpperCase()+"\n";
+ t+="Data: "+hoje+"\n";
+ if($("equip").value.trim())t+="Equipamento: "+$("equip").value.trim()+"\n";
+ if($("tec").value.trim())t+="Técnico: "+$("tec").value.trim()+"\n";
+ t+="\nRELATO:\n"+$("relato").value.trim()+"\n";
+ t+="\nPROCEDIMENTOS REALIZADOS:\n"+(procs.join("\n")||"-")+"\n";
+ if($("achados").value.trim())t+="\nACHADOS:\n"+$("achados").value.trim()+"\n";
+ t+="\nCONCLUSÃO:\n"+c.t+"\n";
+ t+="\nRECOMENDAÇÃO:\n"+c.r+"\n";
+ $("out").value=t;
+}
+["equip","tec","relato","achados","concl"].forEach(id=>$(id).addEventListener("input",gen));
+$("procs").addEventListener("change",gen);
+$("tec").addEventListener("input",()=>{try{localStorage.setItem("tec",$("tec").value)}catch(e){}});
+$("copy").onclick=async()=>{try{await navigator.clipboard.writeText($("out").value);}catch(e){$("out").select();document.execCommand("copy");}$("msg").textContent="Texto copiado.";};
+$("reset").onclick=()=>{$("equip").value="";$("msg").textContent="Campos limpos.";load();};
+try{$("tec").value=localStorage.getItem("tec")||""}catch(e){}
+load();
+</script>
+</body>
+</html>
